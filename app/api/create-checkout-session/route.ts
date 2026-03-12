@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
+import { sendBookingRequestEmail, sendAdminNotificationEmail } from "@/lib/email";
 import { Booking, Service } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { service, serviceId, serviceName, userName, userEmail, userPhone, date, time, notes }: {
+    const { service, userName, userEmail, userPhone, date, time, notes }: {
       service: Service;
-      serviceId: string;
-      serviceName?: string;
       userName: string;
       userEmail: string;
       userPhone: string;
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // Create pending booking in Firestore
+    // 1. Save pending booking to Firestore
     const bookingRef = adminDb.collection("bookings").doc();
     const booking: Booking = {
       id: bookingRef.id,
@@ -45,7 +44,19 @@ export async function POST(req: NextRequest) {
 
     await bookingRef.set(booking);
 
-    // Create Stripe Checkout Session
+    // 2. Send booking request email IMMEDIATELY (before payment)
+    try {
+      await Promise.all([
+        sendBookingRequestEmail(booking),
+        sendAdminNotificationEmail(booking),
+      ]);
+      console.log("✅ Pre-payment emails sent to:", userEmail);
+    } catch (emailErr) {
+      // Log but don't block checkout — booking is saved, email failed
+      console.error("❌ Pre-payment email failed:", emailErr);
+    }
+
+    // 3. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -57,11 +68,6 @@ export async function POST(req: NextRequest) {
             product_data: {
               name: service.name,
               description: `${service.duration} · ${service.category} · ${date} at ${time}`,
-              metadata: {
-                bookingId: bookingRef.id,
-                duration: service.duration,
-                category: service.category,
-              },
             },
             unit_amount: service.price,
           },
@@ -79,7 +85,7 @@ export async function POST(req: NextRequest) {
       cancel_url: `${appUrl}/cancel?booking_id=${bookingRef.id}`,
     });
 
-    // Update booking with session ID
+    // 4. Update booking with Stripe session ID
     await bookingRef.update({
       stripeSessionId: session.id,
       updatedAt: new Date().toISOString(),
