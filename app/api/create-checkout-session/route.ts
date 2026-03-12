@@ -1,0 +1,96 @@
+import { NextRequest, NextResponse } from "next/server";
+import { stripe } from "@/lib/stripe";
+import { adminDb } from "@/lib/firebase-admin";
+import { Booking, Service } from "@/types";
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { service, serviceId, serviceName, userName, userEmail, userPhone, date, time, notes }: {
+      service: Service;
+      serviceId: string;
+      serviceName?: string;
+      userName: string;
+      userEmail: string;
+      userPhone: string;
+      date: string;
+      time: string;
+      notes?: string;
+    } = body;
+
+    if (!service || !userName || !userEmail || !userPhone || !date || !time) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    // Create pending booking in Firestore
+    const bookingRef = adminDb.collection("bookings").doc();
+    const booking: Booking = {
+      id: bookingRef.id,
+      serviceId: service.id,
+      serviceName: service.name,
+      servicePrice: service.price,
+      userName,
+      userEmail,
+      userPhone,
+      date,
+      time,
+      notes: notes || "",
+      status: "pending",
+      paymentStatus: "pending",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await bookingRef.set(booking);
+
+    // Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: userEmail,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: service.name,
+              description: `${service.duration} · ${service.category} · ${date} at ${time}`,
+              metadata: {
+                bookingId: bookingRef.id,
+                duration: service.duration,
+                category: service.category,
+              },
+            },
+            unit_amount: service.price,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        bookingId: bookingRef.id,
+        userName,
+        userEmail,
+        date,
+        time,
+      },
+      success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingRef.id}`,
+      cancel_url: `${appUrl}/cancel?booking_id=${bookingRef.id}`,
+    });
+
+    // Update booking with session ID
+    await bookingRef.update({
+      stripeSessionId: session.id,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return NextResponse.json({ sessionId: session.id });
+  } catch (error: unknown) {
+    console.error("Checkout session error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

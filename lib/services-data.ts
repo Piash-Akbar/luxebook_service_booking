@@ -1,0 +1,68 @@
+import { Service } from "@/types";
+
+export const services: Service[] = [
+  {
+    id: "deep-tissue-massage",
+    name: "Deep Tissue Massage",
+    description: "Therapeutic massage targeting deep muscle layers to release chronic tension and pain.",
+    price: 12000,
+    duration: "90 min",
+    category: "Wellness",
+    icon: "✦",
+    features: ["Full body treatment", "Hot stone option", "Aromatherapy included", "Post-session consultation"],
+    popular: true,
+  },
+  {
+    id: "luxury-facial",
+    name: "Luxury Facial",
+    description: "A premium facial treatment using advanced serums and techniques for radiant, youthful skin.",
+    price: 9500,
+    duration: "60 min",
+    category: "Beauty",
+    icon: "◈",
+    features: ["Skin analysis", "Custom serum blend", "LED light therapy", "Collagen mask"],
+  },
+  {
+    id: "personal-training",
+    name: "Personal Training",
+    description: "One-on-one training session tailored to your fitness goals with a certified expert trainer.",
+    price: 8000,
+    duration: "60 min",
+    category: "Fitness",
+    icon: "◉",
+    features: ["Fitness assessment", "Custom workout plan", "Nutrition guidance", "Progress tracking"],
+  },
+  {
+    id: "hair-styling",
+    name: "Premium Hair Styling",
+    description: "Complete hair transformation including cut, color consultation, and professional styling.",
+    price: 15000,
+    duration: "2 hrs",
+    category: "Beauty",
+    icon: "✿",
+    features: ["Consultation", "Professional cut", "Deep conditioning", "Blowout & style"],
+    popular: true,
+  },
+  {
+    id: "nutrition-consultation",
+    name: "Nutrition Consultation",
+    description: "Personalized dietary assessment and meal plan creation by a certified nutritionist.",
+    price: 7500,
+    duration: "45 min",
+    category: "Wellness",
+    icon: "❋",
+    features: ["Body composition analysis", "Custom meal plan", "Supplement advice", "30-day follow-up"],
+  },
+  {
+    id: "interior-design",
+    name: "Interior Design Consult",
+    description: "Professional interior design consultation to transform your living or working space.",
+    price: 25000,
+    duration: "3 hrs",
+    category: "Design",
+    icon: "◆",
+    features: ["Space analysis", "Mood board creation", "Material sourcing", "3D visualization"],
+  },
+];
+
+export const categories = [...new Set(services.map((s) => s.category))];
