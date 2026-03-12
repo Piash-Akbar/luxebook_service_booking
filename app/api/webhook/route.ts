@@ -5,10 +5,6 @@ import { sendBookingConfirmationEmail, sendAdminNotificationEmail } from "@/lib/
 import { Booking } from "@/types";
 import Stripe from "stripe";
 
-export const config = {
-  api: { bodyParser: false },
-};
-
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
@@ -18,9 +14,12 @@ export async function POST(req: NextRequest) {
   }
 
   let event: Stripe.Event;
-
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripe.webhooks.constructEvent(
+      body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
   } catch (err: unknown) {
     console.error("Webhook signature verification failed:", err);
     return NextResponse.json(
@@ -31,9 +30,8 @@ export async function POST(req: NextRequest) {
 
   try {
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.CheckoutSession;
+      const session = event.data.object as Stripe.Checkout.Session;
       const bookingId = session.metadata?.bookingId;
-
       if (!bookingId) {
         console.error("No bookingId in session metadata");
         return NextResponse.json({ received: true });
@@ -65,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (event.type === "checkout.session.expired") {
-      const session = event.data.object as Stripe.CheckoutSession;
+      const session = event.data.object as Stripe.Checkout.Session;
       const bookingId = session.metadata?.bookingId;
       if (bookingId) {
         await adminDb.collection("bookings").doc(bookingId).update({
