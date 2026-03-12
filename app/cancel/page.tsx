@@ -5,8 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
+import { Suspense } from "react";
 
-export default function CancelPage() {
+
+function CancelContent() {
   const params = useSearchParams();
   const bookingId = params.get("booking_id");
 
@@ -80,5 +82,13 @@ export default function CancelPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function CancelPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>Loading...</div>}>
+      <CancelContent />
+    </Suspense>
   );
 }

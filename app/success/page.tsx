@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { Booking } from "@/types";
 
-export default function SuccessPage() {
+function SuccessContent() {
   const params = useSearchParams();
   const bookingId = params.get("booking_id");
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -194,4 +194,12 @@ export default function SuccessPage() {
       </div>
     </main>
   );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>Loading...</div>}>
+      <SuccessContent />
+    </Suspense>
+  )
 }
